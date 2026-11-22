@@ -1,0 +1,37 @@
+using System;
+using MelonLoader;
+
+[assembly: MelonInfo(typeof(CrystalLeather.Main), "CrystalLeather", "1.0.0", "Cheeto35")]
+[assembly: MelonGame("Alta", "A Township Tale")]
+
+namespace CrystalLeather
+{
+    public class Main : MelonMod
+    {
+        public static MelonLogger.Instance Log;
+        public static bool IsServer;
+
+        public override void OnInitializeMelon()
+        {
+            Log = LoggerInstance;
+            IsServer = ApplicationManager.IsHeadless
+                || CommandLineArguments.Contains(CommandLineArguments.StartServerArgument);
+            Alta.Console.CommandService.CommandCollection.Collect(typeof(Main).Assembly);
+            Log.Msg("CrystalLeather 1.0.0 starting (" + (IsServer ? "server" : "client") + ")");
+        }
+
+        public override void OnSceneWasLoaded(int buildIndex, string sceneName)
+        {
+            CrystalMaterial.Register();
+            WyrmPrefabs.Register();
+        }
+
+        public override void OnUpdate()
+        {
+            try { WyrmVariants.Tick(); } catch (Exception e) { Log.Error("wyrms: " + e); }
+            if (IsServer) return;
+            try { CrystalMaterial.TryUpgradeLook(); } catch (Exception e) { Log.Error("look: " + e); }
+            try { GlowManager.Tick(); } catch (Exception e) { Log.Error("glow: " + e); }
+        }
+    }
+}
