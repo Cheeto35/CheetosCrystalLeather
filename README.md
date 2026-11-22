@@ -8,7 +8,11 @@ A mod for A Township Tale that makes the deep mines worth going down for. Crysta
 
 Crystal wyrms drop **Crystal Leather** instead of normal wyrm leather. It comes in the wyrm's color: blue, green or purple. It works exactly like normal wyrm leather and fits every recipe it does. The difference is that it glows.
 
+![Rolls and bags of crystal leather in all three colors](docs/leather.png)
+
 A single piece gives off a faint glow. The more crystal leather something is made of, the brighter it gets, and a full bag made of it lights up the cave around you. It keeps glowing when you're wearing it or carrying it, and an item made from more than one color glows in each of them.
+
+![Purple, green and blue crystal leather bags lighting up the cave floor](docs/bags.png)
 
 ## Green and purple wyrms
 
