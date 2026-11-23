@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Reflection;
-using Alta;
-using HarmonyLib;
+#if QUEST
+using Il2Cpp;
+#endif
 using UnityEngine;
 
 namespace CrystalLeather

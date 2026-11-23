@@ -1,7 +1,11 @@
+#if QUEST
+using Il2CppAlta.Intelligence;
+#else
 using Alta.Impact;
 using Alta.Intelligence;
 using Alta.Intelligence.Wyrms;
 using Alta.Networking;
+#endif
 using HarmonyLib;
 using UnityEngine;
 
@@ -12,6 +16,9 @@ namespace CrystalLeather
     {
         static void Postfix(Wyrm __instance) { WyrmVariants.Track(__instance); }
     }
+
+#if !QUEST
+    // These all change how wyrms fight. That runs on the server, so they aren't in the Quest build.
 
     // Attack speed: every move a wyrm makes (bite, spit, spin, dig, coming up...) gets shorter the faster it is.
     // Other creatures can run through this same code, so only touch wyrms.
@@ -156,4 +163,5 @@ namespace CrystalLeather
             if (__instance is WyrmSpinSettings || __instance is WyrmSpitSettings) __result *= WyrmTiers.RageAttackWeight;
         }
     }
+#endif
 }

@@ -1,10 +1,17 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
+#if QUEST
+using Il2Cpp;
+using Il2CppAlta.Intelligence;
+using Il2CppAlta.Networking;
+#else
+using Alta.Chunks;
 using Alta.Intelligence;
 using Alta.Intelligence.Wyrms;
 using Alta.Networking;
+using Alta.Populations;
+#endif
 using HarmonyLib;
 using UnityEngine;
 
@@ -75,7 +82,10 @@ namespace CrystalLeather
                     if (spitT != null)
                         foreach (ProjectileShooter ps in wyrmT.GetComponentsInChildren<ProjectileShooter>(true))
                             Game.SetShotPrefab(ps, spitT.GetComponentInChildren<Projectile>(true));
+#if !QUEST
+                    // The behavior settings only matter where the wyrms think, which is the server.
                     OwnActionSets[(int)t] = Tune(wyrmT, t);
+#endif
 
                     if (spitT != null) { Game.PutPrefab(sh, spitT); Templates[sh] = spitT; }
                     Game.PutPrefab(wh, wyrmT); Templates[wh] = wyrmT;
@@ -102,6 +112,7 @@ namespace CrystalLeather
             return copy;
         }
 
+#if !QUEST
         static void Set(object o, string field, Func<float, float> f, string label)
         {
             Traverse tr = Traverse.Create(o).Field(field);
@@ -156,6 +167,7 @@ namespace CrystalLeather
             for (Transform c = t.parent; c != null && c != root; c = c.parent) p = c.name + "/" + p;
             return p;
         }
+#endif
 
         // Players' side: the spit takes the wyrm's color. The crystal ball gets that color's glowing crystal look, and
         // the sparks, trail and light get recolored.
@@ -166,7 +178,7 @@ namespace CrystalLeather
             var copies = new Dictionary<int, Material>();
             foreach (Renderer r in spitT.GetComponentsInChildren<Renderer>(true))
             {
-                Material[] mats = r.sharedMaterials;
+                var mats = r.sharedMaterials;
                 for (int i = 0; i < mats.Length; i++)
                 {
                     Material m = mats[i];
@@ -193,8 +205,11 @@ namespace CrystalLeather
             {
                 var main = p.main; main.startColor = Shift(main.startColor, target);
                 var col = p.colorOverLifetime; if (col.enabled) col.color = Shift(col.color, target);
+#if !QUEST
+                // The Quest game doesn't have these two settings (the game never used them, so they were left out).
                 var spd = p.colorBySpeed; if (spd.enabled) spd.color = Shift(spd.color, target);
                 var tr = p.trails; if (tr.enabled) { tr.colorOverLifetime = Shift(tr.colorOverLifetime, target); tr.colorOverTrail = Shift(tr.colorOverTrail, target); }
+#endif
             }
             foreach (Light l in spitT.GetComponentsInChildren<Light>(true)) l.color = Shift(l.color, target);
             foreach (TrailRenderer tr in spitT.GetComponentsInChildren<TrailRenderer>(true)) tr.colorGradient = Shift(tr.colorGradient, target);
@@ -206,13 +221,20 @@ namespace CrystalLeather
             switch (g.mode)
             {
                 case ParticleSystemGradientMode.Color: return new ParticleSystem.MinMaxGradient(Shift(g.color, target));
-                case ParticleSystemGradientMode.TwoColors: return new ParticleSystem.MinMaxGradient(Shift(g.colorMin, target), Shift(g.colorMax, target));
                 case ParticleSystemGradientMode.Gradient: return new ParticleSystem.MinMaxGradient(Shift(g.gradient, target));
+#if QUEST
+                // The Quest game is missing the two-value constructor and getters, so change the values in place.
+                case ParticleSystemGradientMode.TwoColors: g.m_ColorMin = Shift(g.m_ColorMin, target); g.m_ColorMax = Shift(g.m_ColorMax, target); return g;
+                case ParticleSystemGradientMode.TwoGradients: g.m_GradientMin = Shift(g.m_GradientMin, target); g.m_GradientMax = Shift(g.m_GradientMax, target); return g;
+                default: return g;
+#else
+                case ParticleSystemGradientMode.TwoColors: return new ParticleSystem.MinMaxGradient(Shift(g.colorMin, target), Shift(g.colorMax, target));
                 case ParticleSystemGradientMode.TwoGradients: return new ParticleSystem.MinMaxGradient(Shift(g.gradientMin, target), Shift(g.gradientMax, target));
                 default:
                     var r = new ParticleSystem.MinMaxGradient(Shift(g.gradient, target));
                     r.mode = g.mode;
                     return r;
+#endif
             }
         }
 
@@ -242,16 +264,17 @@ namespace CrystalLeather
         static void Postfix() { WyrmPrefabs.Register(); }
     }
 
+#if !QUEST
     // Natural spawns: when the game is about to spawn a crystal wyrm, pick its color based on how deep the level is.
-    [HarmonyPatch(typeof(Alta.Populations.PopulationSample), "SpawnRandom")]
+    [HarmonyPatch(typeof(PopulationSample), "SpawnRandom")]
     static class PopulationSpawnPatch
     {
-        public static Alta.Populations.PopulationSample Current;
-        static void Prefix(Alta.Populations.PopulationSample __instance) { Current = __instance; }
+        public static PopulationSample Current;
+        static void Prefix(PopulationSample __instance) { Current = __instance; }
         static void Finalizer() { Current = null; }
     }
 
-    [HarmonyPatch(typeof(Alta.Populations.PopulationDefinition), "GetRandom")]
+    [HarmonyPatch(typeof(PopulationDefinition), "GetRandom")]
     static class PopulationPickPatch
     {
         static void Postfix(ref uint __result)
@@ -262,7 +285,7 @@ namespace CrystalLeather
             var chunk = sample.Chunk;
             if (chunk != null)
             {
-                var st = chunk.GetComponent<Alta.Chunks.CaveLayerStreamer>();
+                var st = chunk.GetComponent<CaveLayerStreamer>();
                 level = st != null ? st.LayerIdentifier : WyrmVariants.LevelAtPos(chunk.transform.position);
             }
             if (level < 0) return;
@@ -271,4 +294,5 @@ namespace CrystalLeather
             Main.Log.Msg("population spawn on L" + level + ": " + WyrmTiers.PrefabName(t));
         }
     }
+#endif
 }

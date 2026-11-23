@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The Quest build of CrystalLeather. Built from the same source files as the PC one, with QUEST defined.
+       Needs the Quest reference DLLs (https://github.com/TheRavenSeb/ATT-Quest-Modding-dlls). -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>CrystalLeather.Quest</AssemblyName>
+    <RootNamespace>CrystalLeather</RootNamespace>
+    <DefineConstants>$(DefineConstants);QUEST</DefineConstants>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <GenerateDependencyFile>false</GenerateDependencyFile>
+    <DebugType>none</DebugType>
+    <QuestDlls Condition="'$(QuestDlls)' == ''">$(MSBuildThisFileDirectory)..\..\ATT Quest Dlls\questdlls</QuestDlls>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Main.cs" />
+    <Compile Include="..\Core\*.cs" />
+    <Compile Include="..\Compat\GameQuest.cs" />
+    <Compile Include="..\Material\*.cs" />
+    <Compile Include="..\Glow\*.cs" />
+    <Compile Include="..\Wyrms\WyrmPrefabs.cs" />
+    <Compile Include="..\Wyrms\WyrmVariants.cs" />
+    <Compile Include="..\Wyrms\WyrmPatches.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="$(QuestDlls)\*.dll" Private="false" />
+  </ItemGroup>
+</Project>

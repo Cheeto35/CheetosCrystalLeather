@@ -1,6 +1,15 @@
 using System.Collections.Generic;
 using System.Linq;
+#if QUEST
+using Il2Cpp;
+using Il2CppAlta.Chunks;
+using Il2CppAlta.Intelligence;
+using Il2CppAlta.Networking;
+#else
+using Alta.Chunks;
+using Alta.Intelligence;
 using Alta.Networking;
+#endif
 using HarmonyLib;
 using UnityEngine;
 
@@ -14,7 +23,7 @@ namespace CrystalLeather
         {
             if (Main.IsServer || __instance == null) return;
             Tint? tint = CrystalMaterial.TintOf(physicalMaterial);
-            if (tint.HasValue && CrystalMaterial.Source != null && __instance.GetComponentInChildren<Alta.Intelligence.Wyrm>(true) != null)
+            if (tint.HasValue && CrystalMaterial.Source != null && __instance.GetComponentInChildren<Wyrm>(true) != null)
             {
                 // An old test wyrm marked with crystal leather (see WyrmVariants): note its color and give it its
                 // normal skin back.
@@ -119,7 +128,7 @@ namespace CrystalLeather
             {
                 chain.Add(c);
                 nodes.Add(new GroupRoot.Node(c.GetComponent<NetworkEntity>() != null,
-                    c.GetComponent<Alta.Chunks.Chunk>() != null, c.GetComponent<Player>() != null));
+                    c.GetComponent<Chunk>() != null, c.GetComponent<Player>() != null));
             }
             return chain[GroupRoot.Pick(nodes.ToArray())];
         }

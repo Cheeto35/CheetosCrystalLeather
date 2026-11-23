@@ -1,3 +1,6 @@
 *.exe
 *.dll
 !CrystalLeather.dll
+!CrystalLeather.Quest.dll
+Quest/bin/
+Quest/obj/

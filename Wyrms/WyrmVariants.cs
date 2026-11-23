@@ -1,11 +1,18 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+#if QUEST
+using Il2Cpp;
+using Il2CppAlta.Chunks;
+using Il2CppAlta.Intelligence;
+using Il2CppAlta.Networking;
+#else
 using Alta.Chunks;
 using Alta.Impact;
 using Alta.Intelligence;
 using Alta.Networking;
 using HarmonyLib;
+#endif
 using UnityEngine;
 
 namespace CrystalLeather
@@ -33,8 +40,10 @@ namespace CrystalLeather
         }
 
         public const float LevelTimeout = 10f;
+#if !QUEST
         static readonly System.Reflection.FieldInfo ImpactMultsField = AccessTools.Field(typeof(HealthObject), "impactTypeMultipliers");
         static readonly System.Reflection.FieldInfo UpdateIntervalField = AccessTools.Field(typeof(Agent), "updateInterval");
+#endif
         // Everything below is keyed by instance id, so the same object is never tracked twice.
         static readonly Dictionary<int, State> States = new Dictionary<int, State>();
         static float _next;
@@ -160,7 +169,9 @@ namespace CrystalLeather
                 if (!legacy.HasValue && Noted.TryGetValue(e.GetInstanceID(), out noted)) legacy = noted.Value;
                 if (legacy.HasValue && legacy.Value != Tint.Blue)
                 {
+#if !QUEST
                     if (Main.IsServer && Convert(s, legacy.Value)) return;
+#endif
                     if (!Main.IsServer) return; // the server will replace it
                 }
             }
@@ -169,6 +180,7 @@ namespace CrystalLeather
 
             HealthObject h = w.HealthObject;
             if (h != null) s.BaseMax = h.MaxHealth;
+#if !QUEST
             if (Main.IsServer)
             {
                 if (h != null && s.M.Health != 1f)
@@ -192,7 +204,9 @@ namespace CrystalLeather
                 }
                 if (s.Crystal && s.Tint == Tint.Green) UpdateIntervalField.SetValue(w, (float)UpdateIntervalField.GetValue(w) * WyrmTiers.GreenThink);
             }
-            else if (s.Crystal && s.Tint != Tint.Blue) Recolor(s);
+            else
+#endif
+            if (s.Crystal && s.Tint != Tint.Blue) Recolor(s);
 
             s.Applied = true;
             if (s.Crystal || level >= 50 || WyrmCommands.Verbose)
@@ -200,6 +214,7 @@ namespace CrystalLeather
                     + (h != null ? " hp " + h.Health.ToString("0") + "/" + h.MaxHealth.ToString("0") : ""));
         }
 
+#if !QUEST
         // Server: swap one of those old wyrms for the real green or purple one, in the same spot with the same health left.
         static bool Convert(State s, Tint t)
         {
@@ -218,10 +233,11 @@ namespace CrystalLeather
         }
 
         static readonly Dictionary<int, float> PendingHealth = new Dictionary<int, float>();
+#endif
 
         static void SetAnimSpeed(State s)
         {
-            Alta.Networking.Animation.NetworkAnimator na = s.Wyrm.NetworkAnimator;
+            var na = s.Wyrm.NetworkAnimator;
             Animator a = na != null ? na.Animator : null;
             if (a != null) a.speed = s.M.Speed;
         }
@@ -308,7 +324,7 @@ namespace CrystalLeather
             tex.ReadPixels(new Rect(0, 0, w, h), 0, 0);
             RenderTexture.active = prev;
             RenderTexture.ReleaseTemporary(rt);
-            Color32[] px = tex.GetPixels32();
+            var px = tex.GetPixels32();
             for (int i = 0; i < px.Length; i++)
             {
                 Color c = px[i];
@@ -334,7 +350,7 @@ namespace CrystalLeather
             var seen = new HashSet<string>();
             foreach (Renderer r in s.Root.GetComponentsInChildren<Renderer>(true))
             {
-                Material[] mats = r.sharedMaterials;
+                var mats = r.sharedMaterials;
                 bool any = false;
                 for (int i = 0; i < mats.Length; i++)
                 {
