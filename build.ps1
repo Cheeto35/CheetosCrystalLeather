@@ -20,7 +20,7 @@ if (-not (Test-Path $csc))     { throw "Can't find the C# compiler at $csc (.NET
 
 $refs = @(Get-ChildItem (Join-Path $managed '*.dll') | ForEach-Object { "/r:$($_.FullName)" })
 $refs += "/r:$(Join-Path $melon 'MelonLoader.dll')", "/r:$(Join-Path $melon '0Harmony.dll')"
-$dirs = @('Core', 'Material', 'Drops', 'Glow', 'Wyrms') | ForEach-Object { Join-Path $here $_ }
+$dirs = @('Core', 'Compat', 'Material', 'Drops', 'Glow', 'Wyrms') | ForEach-Object { Join-Path $here $_ }
 $src = @(Join-Path $here 'Main.cs') + @(Get-ChildItem $dirs -Recurse -Filter '*.cs' | ForEach-Object { $_.FullName })
 $out = Join-Path $here 'CrystalLeather.dll'
 

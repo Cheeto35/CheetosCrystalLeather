@@ -32,19 +32,13 @@ namespace CrystalLeather
 
         public static bool Is(PhysicalMaterial m) { return TintOf(m).HasValue; }
 
-        static readonly FieldInfo HashField = AccessTools.Field(typeof(HashedGeneralValue), "hash");
-        static readonly FieldInfo ItemsField = AccessTools.Field(typeof(HashedGeneralValue<PhysicalMaterial>), "items");
-        static readonly FieldInfo ByNameField = AccessTools.Field(typeof(HashedGeneralValue<PhysicalMaterial>), "itemsByName");
-
         // Safe to call more than once. Makes the leathers the first time, and puts them back in the game's list if
         // they've gone missing from it.
         public static bool Register()
         {
             try
             {
-                HashedGeneralValue<PhysicalMaterial>.CheckItems();
-                var items = ItemsField.GetValue(null) as Dictionary<uint, PhysicalMaterial>;
-                if (items == null) { Main.Log.Error("material table not loaded yet"); return false; }
+                if (!Game.MaterialTableReady()) { Main.Log.Error("material table not loaded yet"); return false; }
 
                 PhysicalMaterial src = null;
                 bool changed = false;
@@ -53,25 +47,24 @@ namespace CrystalLeather
                     Ids.LeatherInfo info = Ids.Leather(t);
                     if (_instances[(int)t] == null)
                     {
-                        if (src == null) src = NameLookup.Find(HashedGeneralValue<PhysicalMaterial>.All, m => m.name, Ids.SourceName);
+                        if (src == null) src = NameLookup.Find(Game.AllMaterials(), m => m.name, Ids.SourceName);
                         if (src != null) Source = src;
                         if (src == null) { Main.Log.Error("source leather '" + Ids.SourceName + "' not found"); return false; }
                         PhysicalMaterial clone = UnityEngine.Object.Instantiate(src);
                         clone.name = info.Name;
                         clone.hideFlags = HideFlags.DontUnloadUnusedAsset;
-                        HashField.SetValue(clone, unchecked((int)info.Hash));
+                        Game.SetMaterialHash(clone, info.Hash);
                         if (!Main.IsServer) Recolor(clone, info);
                         _instances[(int)t] = clone;
                         Main.Log.Msg("registered " + info.Name + " hash=" + info.Hash + " from " + src.name);
                     }
-                    PhysicalMaterial existing;
-                    if (!items.TryGetValue(info.Hash, out existing) || existing != _instances[(int)t])
+                    if (Game.MaterialAt(info.Hash) != _instances[(int)t])
                     {
-                        items[info.Hash] = _instances[(int)t];
+                        Game.PutMaterial(info.Hash, _instances[(int)t]);
                         changed = true;
                     }
                 }
-                if (changed) ByNameField.SetValue(null, null);
+                if (changed) Game.ResetMaterialNames();
                 return true;
             }
             catch (Exception e)
@@ -204,9 +197,9 @@ namespace CrystalLeather
                 if (inst == null || _crystalLook[(int)t]) continue;
                 Material mine = LeatherCopy(t);
                 if (mine == null) continue;
-                SetAllChannels(inst, mine);
+                Game.SetAllChannels(inst, mine);
                 _crystalLook[(int)t] = true;
-                foreach (PhysicalMaterialPart p in new List<PhysicalMaterialPart>(GlowManager.Parts))
+                foreach (PhysicalMaterialPart p in new List<PhysicalMaterialPart>(GlowManager.Parts.Values))
                     if (p != null && p.PhysicalMaterial == inst) p.SetMaterial(inst);
             }
         }
@@ -223,13 +216,7 @@ namespace CrystalLeather
         // Players' side: plain tinted leather to use until the crystal material is loaded.
         static void Recolor(PhysicalMaterial clone, Ids.LeatherInfo info)
         {
-            Material baseMat = null;
-            foreach (object ch in Channels(clone))
-            {
-                var t = Traverse.Create(ch);
-                baseMat = t.Field("nonDeformingMaterial").GetValue<Material>() ?? t.Field("material").GetValue<Material>();
-                if (baseMat != null) break;
-            }
+            Material baseMat = Game.ChannelBaseMaterial(clone);
             if (baseMat == null) return;
             Material mine = new Material(baseMat) { name = info.Name + "_m" };
             Color albedo = Hex(info.AlbedoHex);
@@ -245,28 +232,7 @@ namespace CrystalLeather
                 mine.SetColor("_EmissionColor", Hex(info.EmissionHex) * 0.95f);
             }
             mine.hideFlags = HideFlags.DontUnloadUnusedAsset;
-            SetAllChannels(clone, mine);
-        }
-
-        static System.Collections.IEnumerable Channels(PhysicalMaterial m)
-        {
-            var list = Traverse.Create(m).Field("materialChannels").GetValue<System.Collections.IEnumerable>();
-            if (list == null) yield break;
-            foreach (object ch in list) if (ch != null) yield return ch;
-        }
-
-        // Points the leather at our own material everywhere the game might look, without touching the normal leather.
-        static void SetAllChannels(PhysicalMaterial m, Material mine)
-        {
-            foreach (object ch in Channels(m))
-            {
-                var t = Traverse.Create(ch);
-                t.Field("material").SetValue(mine);
-                t.Field("nonDeformingMaterial").SetValue(mine);
-                t.Field("atlasedMaterial").SetValue(mine);
-                t.Field("needsFixing").SetValue(false);
-                t.Field("offsetScale").SetValue(new Vector4(1f, 1f, 0f, 0f));
-            }
+            Game.SetAllChannels(clone, mine);
         }
     }
 }

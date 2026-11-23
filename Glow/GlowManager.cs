@@ -22,8 +22,8 @@ namespace CrystalLeather
                 __instance.SetMaterial(CrystalMaterial.Source);
                 return;
             }
-            if (tint.HasValue) GlowManager.Parts.Add(__instance);
-            else GlowManager.Parts.Remove(__instance);
+            if (tint.HasValue) GlowManager.Parts[__instance.GetInstanceID()] = __instance;
+            else GlowManager.Parts.Remove(__instance.GetInstanceID());
         }
     }
 
@@ -32,12 +32,15 @@ namespace CrystalLeather
     // a pile of leather doesn't slow the game down.
     public static class GlowManager
     {
-        public static readonly HashSet<PhysicalMaterialPart> Parts = new HashSet<PhysicalMaterialPart>();
+        // Keyed by instance id, so the same piece is never counted twice.
+        public static readonly Dictionary<int, PhysicalMaterialPart> Parts = new Dictionary<int, PhysicalMaterialPart>();
         public static int NFull = Brightness.DefaultNFull;
 
         class Glow { public GameObject Go; public Light Light; public float Intensity; }
-        // One light per item and color, so an item made from more than one color glows in each of them.
-        static readonly Dictionary<KeyValuePair<Transform, Tint>, Glow> Glows = new Dictionary<KeyValuePair<Transform, Tint>, Glow>();
+        class Group { public Transform Root; public Tint Tint; public readonly List<PhysicalMaterialPart> Pieces = new List<PhysicalMaterialPart>(); }
+        // One light per item and color, so an item made from more than one color glows in each of them. Keyed by the
+        // item's instance id and the color.
+        static readonly Dictionary<KeyValuePair<int, Tint>, Glow> Glows = new Dictionary<KeyValuePair<int, Tint>, Glow>();
         static float _next;
 
         public static void Tick()
@@ -45,20 +48,23 @@ namespace CrystalLeather
             if (Time.time < _next) return;
             _next = Time.time + Brightness.Rescan;
 
-            Parts.RemoveWhere(p => p == null || !CrystalMaterial.Is(p.PhysicalMaterial));
+            foreach (int gone in Parts.Where(kv => kv.Value == null || !CrystalMaterial.Is(kv.Value.PhysicalMaterial)).Select(kv => kv.Key).ToList())
+                Parts.Remove(gone);
 
-            var groups = new Dictionary<KeyValuePair<Transform, Tint>, List<PhysicalMaterialPart>>();
-            foreach (PhysicalMaterialPart p in Parts)
+            var groups = new Dictionary<KeyValuePair<int, Tint>, Group>();
+            foreach (PhysicalMaterialPart p in Parts.Values)
             {
                 if (!p.gameObject.activeInHierarchy) continue;
-                var root = new KeyValuePair<Transform, Tint>(GroupOf(p.transform), CrystalMaterial.TintOf(p.PhysicalMaterial) ?? Tint.Blue);
-                List<PhysicalMaterialPart> list;
-                if (!groups.TryGetValue(root, out list)) groups[root] = list = new List<PhysicalMaterialPart>();
-                list.Add(p);
+                Transform root = GroupOf(p.transform);
+                Tint tint = CrystalMaterial.TintOf(p.PhysicalMaterial) ?? Tint.Blue;
+                var key = new KeyValuePair<int, Tint>(root.GetInstanceID(), tint);
+                Group grp;
+                if (!groups.TryGetValue(key, out grp)) groups[key] = grp = new Group { Root = root, Tint = tint };
+                grp.Pieces.Add(p);
             }
 
             // Remove lights for items that are gone.
-            foreach (var dead in Glows.Keys.Where(k => k.Key == null || !groups.ContainsKey(k)).ToList())
+            foreach (var dead in Glows.Keys.Where(k => !groups.ContainsKey(k)).ToList())
             {
                 Glow g;
                 if (Glows.TryGetValue(dead, out g) && g.Go != null) Object.Destroy(g.Go);
@@ -71,15 +77,15 @@ namespace CrystalLeather
             foreach (var kv in groups)
             {
                 float range, intensity;
-                Brightness.For(kv.Value.Count, NFull, out range, out intensity);
-                Transform anchor = kv.Value[0].transform;
+                Brightness.For(kv.Value.Pieces.Count, NFull, out range, out intensity);
+                Transform anchor = kv.Value.Pieces[0].transform;
                 Glow g;
                 if (!Glows.TryGetValue(kv.Key, out g) || g.Go == null)
                 {
                     g = new Glow { Go = new GameObject("Crystal Leather Glow") };
                     g.Light = g.Go.AddComponent<Light>();
                     g.Light.type = LightType.Point;
-                    g.Light.color = CrystalMaterial.LightColor(kv.Key.Value);
+                    g.Light.color = CrystalMaterial.LightColor(kv.Value.Tint);
                     g.Light.shadows = LightShadows.None;
                     g.Light.renderMode = LightRenderMode.Auto;
                     Glows[kv.Key] = g;

@@ -18,10 +18,6 @@ namespace CrystalLeather
     // The copies are kept on a switched-off object so they don't come alive by themselves.
     public static class WyrmPrefabs
     {
-        static readonly FieldInfo MapField = AccessTools.Field(typeof(PrefabManager), "prefabMap");
-        static readonly FieldInfo HashField = AccessTools.Field(typeof(NetworkPrefab), "hash");
-        static readonly FieldInfo ShotPrefabField = AccessTools.Field(typeof(ProjectileShooter), "projectilePrefab");
-
         static GameObject _holder;
         static readonly Dictionary<uint, NetworkPrefab> Templates = new Dictionary<uint, NetworkPrefab>();
         static readonly bool[] OwnActionSets = new bool[3];
@@ -42,17 +38,15 @@ namespace CrystalLeather
         // Safe to call more than once. Runs after the game has loaded its list of creatures.
         public static void Register()
         {
-            var map = MapField.GetValue(null) as Dictionary<uint, NetworkPrefab>;
-            if (map == null || Ready) return;
+            if (!Game.PrefabMapReady() || Ready) return;
             try
             {
-                NetworkPrefab wyrm, spit = null;
-                map.TryGetValue(WyrmTiers.CrystalWyrmHash, out wyrm);
+                NetworkPrefab wyrm = Game.PrefabAt(WyrmTiers.CrystalWyrmHash), spit = null;
                 if (wyrm == null || wyrm.name != "Crystal Wyrm") { Main.Log.Error("prefab " + WyrmTiers.CrystalWyrmHash + " is not 'Crystal Wyrm' (" + (wyrm != null ? wyrm.name : "missing") + ")"); return; }
                 foreach (ProjectileShooter ps in wyrm.GetComponentsInChildren<ProjectileShooter>(true))
                 {
                     // GetComponentInParent doesn't work on these templates, so go to the top object instead.
-                    Projectile pr = ShotPrefabField.GetValue(ps) as Projectile;
+                    Projectile pr = Game.ShotPrefab(ps);
                     NetworkPrefab np = pr != null ? pr.transform.root.GetComponent<NetworkPrefab>() : null;
                     if (np != null) { spit = np; break; }
                 }
@@ -68,7 +62,7 @@ namespace CrystalLeather
                 foreach (Tint t in new[] { Tint.Green, Tint.Purple })
                 {
                     uint wh = WyrmTiers.PrefabHash(t), sh = WyrmTiers.SpitHash(t);
-                    if (Taken(map, wh) || (spit != null && Taken(map, sh))) continue;
+                    if (Taken(wh) || (spit != null && Taken(sh))) continue;
 
                     NetworkPrefab spitT = null;
                     if (spit != null)
@@ -80,21 +74,21 @@ namespace CrystalLeather
                     wyrmT.transform.localScale = wyrmT.transform.localScale * WyrmTiers.TintMults(t).Scale;
                     if (spitT != null)
                         foreach (ProjectileShooter ps in wyrmT.GetComponentsInChildren<ProjectileShooter>(true))
-                            ShotPrefabField.SetValue(ps, spitT.GetComponentInChildren<Projectile>(true));
+                            Game.SetShotPrefab(ps, spitT.GetComponentInChildren<Projectile>(true));
                     OwnActionSets[(int)t] = Tune(wyrmT, t);
 
-                    if (spitT != null) { map[sh] = spitT; Templates[sh] = spitT; }
-                    map[wh] = wyrmT; Templates[wh] = wyrmT;
+                    if (spitT != null) { Game.PutPrefab(sh, spitT); Templates[sh] = spitT; }
+                    Game.PutPrefab(wh, wyrmT); Templates[wh] = wyrmT;
                 }
                 foreach (string line in Report) Main.Log.Msg(line);
             }
             catch (Exception e) { Main.Log.Error("prefab registration failed: " + e); }
         }
 
-        static bool Taken(Dictionary<uint, NetworkPrefab> map, uint hash)
+        static bool Taken(uint hash)
         {
-            NetworkPrefab existing;
-            if (!map.TryGetValue(hash, out existing) || existing == null) return false;
+            NetworkPrefab existing = Game.PrefabAt(hash);
+            if (existing == null) return false;
             if (!Templates.ContainsKey(hash)) Main.Log.Error("id " + hash + " is already taken by '" + existing.name + "' (another mod?), so that color is turned off");
             return true;
         }
@@ -103,7 +97,7 @@ namespace CrystalLeather
         {
             NetworkPrefab copy = UnityEngine.Object.Instantiate(src, _holder.transform, false);
             copy.name = name;
-            HashField.SetValue(copy, unchecked((int)hash));
+            Game.SetPrefabHash(copy, hash);
             Report.Add("registered prefab '" + name + "' hash " + hash + " (from '" + src.name + "')");
             return copy;
         }
@@ -169,7 +163,7 @@ namespace CrystalLeather
         {
             Color target = CrystalMaterial.LightColor(t);
             Material crystal = CrystalMaterial.CrystalCopy(t);
-            var copies = new Dictionary<Material, Material>();
+            var copies = new Dictionary<int, Material>();
             foreach (Renderer r in spitT.GetComponentsInChildren<Renderer>(true))
             {
                 Material[] mats = r.sharedMaterials;
@@ -178,7 +172,7 @@ namespace CrystalLeather
                     Material m = mats[i];
                     if (m == null) continue;
                     Material c;
-                    if (!copies.TryGetValue(m, out c))
+                    if (!copies.TryGetValue(m.GetInstanceID(), out c))
                     {
                         bool ball = m.name.IndexOf("Crystal", StringComparison.OrdinalIgnoreCase) >= 0 && m.shader.name.IndexOf("Atlas", StringComparison.OrdinalIgnoreCase) >= 0;
                         if (ball && crystal != null) c = crystal;
@@ -188,7 +182,7 @@ namespace CrystalLeather
                             c.hideFlags = HideFlags.DontUnloadUnusedAsset;
                             CrystalMaterial.HueShift(c, target);
                         }
-                        copies[m] = c;
+                        copies[m.GetInstanceID()] = c;
                         Report.Add("  spit " + t + " '" + r.name + "' " + m.name + " -> " + c.name + ": " + CrystalMaterial.ColorProps(c));
                     }
                     mats[i] = c;

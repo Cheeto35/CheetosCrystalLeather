@@ -35,7 +35,8 @@ namespace CrystalLeather
         public const float LevelTimeout = 10f;
         static readonly System.Reflection.FieldInfo ImpactMultsField = AccessTools.Field(typeof(HealthObject), "impactTypeMultipliers");
         static readonly System.Reflection.FieldInfo UpdateIntervalField = AccessTools.Field(typeof(Agent), "updateInterval");
-        static readonly Dictionary<Wyrm, State> States = new Dictionary<Wyrm, State>();
+        // Everything below is keyed by instance id, so the same object is never tracked twice.
+        static readonly Dictionary<int, State> States = new Dictionary<int, State>();
         static float _next;
 
         public static IEnumerable<State> All { get { return States.Values.Where(s => s.Wyrm != null && s.Root != null && s.Applied); } }
@@ -43,16 +44,16 @@ namespace CrystalLeather
         public static State Get(Wyrm w)
         {
             State s;
-            return w != null && States.TryGetValue(w, out s) && s.Applied ? s : null;
+            return w != null && States.TryGetValue(w.GetInstanceID(), out s) && s.Applied ? s : null;
         }
 
         // Players' side: colors read off a wyrm's leather before we got to it (see Convert).
-        static readonly Dictionary<NetworkEntity, Tint> Noted = new Dictionary<NetworkEntity, Tint>();
+        static readonly Dictionary<int, KeyValuePair<NetworkEntity, Tint>> Noted = new Dictionary<int, KeyValuePair<NetworkEntity, Tint>>();
 
         public static void NoteTint(NetworkEntity root, Tint t)
         {
             if (root == null) return;
-            Noted[root] = t;
+            Noted[root.GetInstanceID()] = new KeyValuePair<NetworkEntity, Tint>(root, t);
             foreach (State s in States.Values)
                 if (s.Applied && s.Root == root && s.Crystal && s.Tint != t)
                     Main.Log.Msg("wyrm " + s.Id + ": synced color " + t + " differs from applied " + s.Tint);
@@ -60,8 +61,8 @@ namespace CrystalLeather
 
         public static void Track(Wyrm w)
         {
-            if (w == null || States.ContainsKey(w)) return;
-            States[w] = new State { Wyrm = w, FirstSeen = Time.time };
+            if (w == null || States.ContainsKey(w.GetInstanceID())) return;
+            States[w.GetInstanceID()] = new State { Wyrm = w, FirstSeen = Time.time };
         }
 
         public static NetworkEntity RootOf(Transform t)
@@ -106,13 +107,12 @@ namespace CrystalLeather
         {
             if (Time.time < _next) return;
             _next = Time.time + 0.5f;
-            List<Wyrm> dead = null;
+            List<int> dead = null;
             // Loop over a copy, because replacing an old wyrm spawns a new one while we're going through the list.
             foreach (var kv in States.ToList())
             {
-                Wyrm w = kv.Key;
                 State s = kv.Value;
-                if (w == null) { (dead ?? (dead = new List<Wyrm>())).Add(w); continue; }
+                if (s.Wyrm == null) { (dead ?? (dead = new List<int>())).Add(kv.Key); continue; }
                 try
                 {
                     if (!s.Applied) TryApply(s);
@@ -124,8 +124,8 @@ namespace CrystalLeather
                     s.Applied = true;
                 }
             }
-            if (dead != null) foreach (Wyrm w in dead) States.Remove(w);
-            if (Noted.Count > 0) foreach (NetworkEntity n in Noted.Keys.Where(k => k == null).ToList()) Noted.Remove(n);
+            if (dead != null) foreach (int id in dead) States.Remove(id);
+            if (Noted.Count > 0) foreach (int n in Noted.Where(kv => kv.Value.Key == null).Select(kv => kv.Key).ToList()) Noted.Remove(n);
         }
 
         static void TryApply(State s)
@@ -156,8 +156,8 @@ namespace CrystalLeather
                 // leather. If one of those is still around in a save, the server swaps it for the real creature.
                 PhysicalMaterialPart part = e.GetComponent<PhysicalMaterialPart>();
                 Tint? legacy = part != null ? CrystalMaterial.TintOf(part.PhysicalMaterial) : null;
-                Tint noted;
-                if (!legacy.HasValue && Noted.TryGetValue(e, out noted)) legacy = noted;
+                KeyValuePair<NetworkEntity, Tint> noted;
+                if (!legacy.HasValue && Noted.TryGetValue(e.GetInstanceID(), out noted)) legacy = noted.Value;
                 if (legacy.HasValue && legacy.Value != Tint.Blue)
                 {
                     if (Main.IsServer && Convert(s, legacy.Value)) return;
@@ -177,7 +177,7 @@ namespace CrystalLeather
                     h.MaxHealth = s.BaseMax * s.M.Health;
                     if (full) h.Health = h.MaxHealth;
                     float share;
-                    if (PendingHealth.TryGetValue(e, out share)) { PendingHealth.Remove(e); h.Health = h.MaxHealth * share; }
+                    if (PendingHealth.TryGetValue(e.GetInstanceID(), out share)) { PendingHealth.Remove(e.GetInstanceID()); h.Health = h.MaxHealth * share; }
                     if (WyrmCommands.Verbose || Math.Abs(h.MaxHealth - s.BaseMax * s.M.Health) > 0.05f)
                         Main.Log.Msg("wyrm " + s.Id + " health: base " + s.BaseMax + " wanted " + (s.BaseMax * s.M.Health) + " got max " + h.MaxHealth
                             + " health " + h.Health + " on '" + h.name + "'; health objects: "
@@ -211,13 +211,13 @@ namespace CrystalLeather
             NetworkEntity e = SpawnHelper.Spawn(prefab, SpawnData.Default, old.Chunk, tr.position, tr.rotation);
             if (e == null) { Main.Log.Error("wyrm " + s.Id + ": could not spawn '" + prefab.name + "' to replace it"); return false; }
             Main.Log.Msg("wyrm " + s.Id + " (old " + t + ") replaced by '" + prefab.name + "' id " + e.Identifier + " at " + (share * 100f).ToString("0") + "% health");
-            if (share < 0.999f) PendingHealth[e] = share;
+            if (share < 0.999f) PendingHealth[e.GetInstanceID()] = share;
             old.SceneDestroy();
             s.Applied = true;
             return true;
         }
 
-        static readonly Dictionary<NetworkEntity, float> PendingHealth = new Dictionary<NetworkEntity, float>();
+        static readonly Dictionary<int, float> PendingHealth = new Dictionary<int, float>();
 
         static void SetAnimSpeed(State s)
         {
@@ -245,12 +245,12 @@ namespace CrystalLeather
         }
 
         // Recolored materials, made once per color and shared by every wyrm of that color.
-        static readonly Dictionary<KeyValuePair<Material, Tint>, Material> Recolored = new Dictionary<KeyValuePair<Material, Tint>, Material>();
+        static readonly Dictionary<KeyValuePair<int, Tint>, Material> Recolored = new Dictionary<KeyValuePair<int, Tint>, Material>();
 
         // Backup for when the game hasn't loaded that color's crystal yet: the same material, just tinted.
         static Material TintCopy(Material src, Tint t)
         {
-            var key = new KeyValuePair<Material, Tint>(src, t);
+            var key = new KeyValuePair<int, Tint>(src.GetInstanceID(), t);
             Material mine;
             if (Recolored.TryGetValue(key, out mine) && mine != null) return mine;
             mine = new Material(src) { name = src.name + " (" + t + ")" };
@@ -264,11 +264,11 @@ namespace CrystalLeather
 
         // The crystal wyrm's body is one texture: grey skin with blue crystal bits painted on. Copy it and change the
         // color of the blue parts, so green and purple look just like the blue one, only in their own color.
-        static readonly Dictionary<KeyValuePair<Material, Tint>, Material> Shifted = new Dictionary<KeyValuePair<Material, Tint>, Material>();
+        static readonly Dictionary<KeyValuePair<int, Tint>, Material> Shifted = new Dictionary<KeyValuePair<int, Tint>, Material>();
 
         static Material TextureShiftCopy(Material src, Tint t)
         {
-            var key = new KeyValuePair<Material, Tint>(src, t);
+            var key = new KeyValuePair<int, Tint>(src.GetInstanceID(), t);
             Material mine;
             if (Shifted.TryGetValue(key, out mine)) return mine;
             mine = null;
