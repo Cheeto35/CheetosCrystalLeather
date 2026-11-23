@@ -2,17 +2,19 @@
 
 A mod for A Township Tale that makes the deep mines worth going down for. Crystal wyrms drop glowing leather in their own color, two new crystal wyrms show up the deeper you dig, and every wyrm gets tougher the further down it is.
 
-![Purple, green and blue crystal wyrms](docs/wyrms.png)
+![Blue, green and purple crystal wyrms](docs/wyrms.png)
 
 ## Crystal leather
 
 Crystal wyrms drop **Crystal Leather** instead of normal wyrm leather. It comes in the wyrm's color: blue, green or purple. It works exactly like normal wyrm leather and fits every recipe it does. The difference is that it glows.
 
-![Rolls and bags of crystal leather in all three colors](docs/leather.png)
+![A roll of normal wyrm leather next to blue, green and purple crystal leather](docs/rolls.png)
+
+*Normal wyrm leather on the left, crystal leather in each color next to it.*
 
 A single piece gives off a faint glow. The more crystal leather something is made of, the brighter it gets, and a full bag made of it lights up the cave around you. It keeps glowing when you're wearing it or carrying it, and an item made from more than one color glows in each of them.
 
-![Purple, green and blue crystal leather bags lighting up the cave floor](docs/bags.png)
+![Blue, green and purple crystal leather bags lighting up the cave floor](docs/bags.png)
 
 ## Green and purple wyrms
 
@@ -37,11 +39,11 @@ Both are bigger and meaner than the blue ones, and their spit is their own color
 
 **Green** wyrms are the hunters. They react faster, come up out of the ground for you from further away (22.5 m instead of 15), spit from further away (28 m instead of 20), bite twice in a row more often, and stay above ground longer before they dig back in.
 
-![Green wyrm spitting](docs/green-spit.png)
+<img src="docs/green.png" alt="Green crystal wyrm" width="49%"> <img src="docs/green-spit.png" alt="Green wyrm spitting" width="49%">
 
 **Purple** wyrms are the tanks. They take 25% less damage from blunt weapons, and once they drop below half health they go into a rage: they get faster and spin and spit twice as often.
 
-![Purple wyrm spitting](docs/purple-spit.png)
+<img src="docs/purple.png" alt="Purple crystal wyrm" width="49%"> <img src="docs/purple-spit.png" alt="Purple wyrm spitting" width="49%">
 
 ## Deeper means tougher
 
