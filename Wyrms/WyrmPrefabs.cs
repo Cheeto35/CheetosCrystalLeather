@@ -66,6 +66,10 @@ namespace CrystalLeather
                     UnityEngine.Object.DontDestroyOnLoad(_holder);
                 }
                 Report.Clear();
+#if !QUEST
+                // Drops only happen on the server. Do this before the copies are made so green and purple get it too.
+                if (Main.IsServer) OneDropRoll(wyrm);
+#endif
                 foreach (Tint t in new[] { Tint.Green, Tint.Purple })
                 {
                     uint wh = WyrmTiers.PrefabHash(t), sh = WyrmTiers.SpitHash(t);
@@ -113,6 +117,20 @@ namespace CrystalLeather
         }
 
 #if !QUEST
+        // A normal wyrm rolls its leather drop once when it dies, but the game gives crystal wyrms two rolls. Give
+        // them one, so every wyrm has the same chance of dropping leather.
+        static void OneDropRoll(NetworkPrefab wyrm)
+        {
+            foreach (Spawner sp in wyrm.GetComponentsInChildren<Spawner>(true))
+            {
+                Traverse count = Traverse.Create(sp).Field("count");
+                int before = count.GetValue<int>();
+                if (before <= 1) continue;
+                count.SetValue(1);
+                Report.Add("crystal wyrm leather drop rolls: " + before + " -> 1 (same as a normal wyrm)");
+            }
+        }
+
         static void Set(object o, string field, Func<float, float> f, string label)
         {
             Traverse tr = Traverse.Create(o).Field(field);

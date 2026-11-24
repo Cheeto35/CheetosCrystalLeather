@@ -8,6 +8,8 @@ A mod for A Township Tale that makes the deep mines worth going down for. Crysta
 
 Crystal wyrms drop **Crystal Leather** instead of normal wyrm leather. It comes in the wyrm's color: blue, green or purple. It works exactly like normal wyrm leather and fits every recipe it does. The difference is that it glows.
 
+Crystal wyrms drop leather as often as normal wyrms do: a 1 in 4 chance per kill, usually a medium roll and sometimes a large one. (The base game gives crystal wyrms a second roll. The mod takes that away so every wyrm drops the same.)
+
 ![A roll of normal wyrm leather next to blue, green and purple crystal leather](docs/rolls.png)
 
 *Normal wyrm leather on the left, crystal leather in each color next to it.*
