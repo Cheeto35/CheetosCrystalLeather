@@ -1,7 +1,7 @@
 using System;
 using MelonLoader;
 
-[assembly: MelonInfo(typeof(CrystalLeather.Main), "CrystalLeather", "1.1.0", "Cheeto35")]
+[assembly: MelonInfo(typeof(CrystalLeather.Main), "CrystalLeather", "1.1.1", "Cheeto35")]
 #if QUEST
 [assembly: MelonGame("Alta", "Att_Quest")]
 #else
@@ -21,12 +21,12 @@ namespace CrystalLeather
 #if QUEST
             // The Quest game is only ever a player's game. Servers run the PC version.
             IsServer = false;
-            Log.Msg("CrystalLeather 1.1.0 starting (quest)");
+            Log.Msg("CrystalLeather 1.1.1 starting (quest)");
 #else
             IsServer = ApplicationManager.IsHeadless
                 || CommandLineArguments.Contains(CommandLineArguments.StartServerArgument);
             Alta.Console.CommandService.CommandCollection.Collect(typeof(Main).Assembly);
-            Log.Msg("CrystalLeather 1.1.0 starting (" + (IsServer ? "server" : "client") + ")");
+            Log.Msg("CrystalLeather 1.1.1 starting (" + (IsServer ? "server" : "client") + ")");
 #endif
         }
 

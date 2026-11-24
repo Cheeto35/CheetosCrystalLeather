@@ -65,7 +65,7 @@ You need the final game build (`main-1.7.2.1.42203`) with MelonLoader v0.7.3 ins
 
 1. Close the game (or stop the server).
 2. Drop `CrystalLeather.dll` (it's in this folder, ready to use) into the game's `Mods` folder.
-3. Start it up. You should see `CrystalLeather 1.1.0 starting` in the MelonLoader log.
+3. Start it up. You should see `CrystalLeather 1.1.1 starting` in the MelonLoader log.
 
 Don't take the mod off a server once green or purple wyrms or crystal leather are in the world. They need the mod to load.
 
@@ -75,7 +75,7 @@ Players on the standalone Quest version can play on a server with CrystalLeather
 
 1. Install MelonLoader on your Quest. *(Steps coming soon.)*
 2. Put `CrystalLeather.Quest.dll` (it's in this folder) into the Quest game's `Mods` folder.
-3. Start the game. You should see `CrystalLeather 1.1.0 starting (quest)` in the MelonLoader log.
+3. Start the game. You should see `CrystalLeather 1.1.1 starting (quest)` in the MelonLoader log.
 
 With it, you see the same green and purple wyrms and the same glowing leather as players on PC.
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1 (24 Nov 2026)
+
+- Fixed crafting with crystal leather. Placing it on a crafting station could make it look like it disappeared on PC, and on Quest it stopped the craft. Players need this update; the server should have it too.
+
 ## 1.1.0 (23 Nov 2026)
 
 - Quest support: players on the standalone Quest version can install `CrystalLeather.Quest.dll` and see the green and purple wyrms and the glowing leather like PC players. The server still runs the normal `CrystalLeather.dll`.
