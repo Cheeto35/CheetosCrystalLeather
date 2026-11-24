@@ -30,6 +30,10 @@ namespace CrystalLeather
 
         public static LeatherInfo Leather(Tint t) { return Leathers[(int)t]; }
 
+        // Some of the game's messages, like a filled-in crafting piece, send a material with only the low 16 bits
+        // of its hash. Every game also lists each leather under that number, or the piece shows up empty.
+        public static uint WireHash(uint hash) { return hash & 0xFFFFu; }
+
         public static bool TryParseHex(string hex, out float r, out float g, out float b)
         {
             r = g = b = 0f;

@@ -17,6 +17,7 @@ namespace CrystalLeather
         // The normal wyrm leather the new ones are copied from.
         public static PhysicalMaterial Source { get; private set; }
         static readonly bool[] _crystalLook = new bool[3];
+        static readonly bool[] _wireWarned = new bool[3];
 
         // The blue one.
         public static PhysicalMaterial Instance { get { return _instances[0]; } }
@@ -62,6 +63,20 @@ namespace CrystalLeather
                     {
                         Game.PutMaterial(info.Hash, _instances[(int)t]);
                         changed = true;
+                    }
+                    // The short number crafting pieces are sent with. Leave it alone if something else already has it.
+                    uint wire = Ids.WireHash(info.Hash);
+                    PhysicalMaterial atWire = Game.MaterialAt(wire);
+                    if (atWire == null)
+                    {
+                        Game.PutMaterial(wire, _instances[(int)t]);
+                        changed = true;
+                        Main.Log.Msg(info.Name + " also listed as " + wire + " (crafting pieces send that)");
+                    }
+                    else if (atWire != _instances[(int)t] && !_wireWarned[(int)t])
+                    {
+                        _wireWarned[(int)t] = true;
+                        Main.Log.Error(info.Name + ": number " + wire + " is already '" + atWire.name + "', so crafting pieces made of it will look empty to players");
                     }
                 }
                 if (changed) Game.ResetMaterialNames();
