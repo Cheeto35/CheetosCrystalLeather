@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.0 (23 Nov 2026)
+
+- Quest support: players on the standalone Quest version can install `CrystalLeather.Quest.dll` and see the green and purple wyrms and the glowing leather like PC players. The server still runs the normal `CrystalLeather.dll`.
+- Crystal wyrms now drop leather as often as normal wyrms (a 1 in 4 chance per kill). The base game gave them a second roll.
+
 ## 1.0.0 (22 Nov 2026)
 
 First public release.
