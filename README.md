@@ -59,13 +59,23 @@ This stops growing at level 150. A wyrm's attack speed is never more than double
 
 You need the final game build (`main-1.7.2.1.42203`) with MelonLoader v0.7.3 installed. The Modding Tavern launcher sets that up for you.
 
-**The server and every player need the mod.** Green and purple wyrms are new creatures and crystal leather is a new material, so players without the mod won't see them properly.
+**The server and every player need the mod.** Green and purple wyrms are new creatures and crystal leather is a new material, so players without the mod won't see them properly. That includes Quest players (see [Quest](#quest) below).
 
 1. Close the game (or stop the server).
 2. Drop `CrystalLeather.dll` (it's in this folder, ready to use) into the game's `Mods` folder.
 3. Start it up. You should see `CrystalLeather 1.0.0 starting` in the MelonLoader log.
 
 Don't take the mod off a server once green or purple wyrms or crystal leather are in the world. They need the mod to load.
+
+### Quest
+
+Players on the standalone Quest version can play on a server with CrystalLeather too. They need MelonLoader on their Quest and the Quest build of the mod, `CrystalLeather.Quest.dll`. The server itself always runs the normal `CrystalLeather.dll`, quest scene or not.
+
+1. Install MelonLoader on your Quest. *(Steps coming soon.)*
+2. Put `CrystalLeather.Quest.dll` (it's in this folder) into the Quest game's `Mods` folder.
+3. Start the game. You should see `CrystalLeather 1.0.0 starting (quest)` in the MelonLoader log.
+
+With it, you see the same green and purple wyrms and the same glowing leather as players on PC.
 
 ## Console commands
 
@@ -87,3 +97,5 @@ These are for server admins, typed into the server console:
 The new creatures use the prefab hashes 52392 to 52395 (green wyrm, purple wyrm, green spit, purple spit). The leathers use the material hashes 1276475934 (Crystal Leather), 1276475950 (Green) and 1276475966 (Purple). If another mod already uses one of the creature hashes, that color turns itself off and says so in the log.
 
 To build it yourself, run `.\build.ps1` (add `-GamePath` if your game isn't in `C:\Games\Alta\A Township Tale`).
+
+To build the Quest version, run `.\build_quest.ps1`. It needs the .NET 8 SDK and the Quest reference DLLs from [ATT-Quest-Modding-dlls](https://github.com/TheRavenSeb/ATT-Quest-Modding-dlls). By default it looks for them in `..\ATT Quest Dlls\questdlls`. Pass `-QuestDlls` with the `questdlls` folder if yours is somewhere else. Both versions are built from the same source files. The Quest one only has what runs on a player's game, since servers always run the PC version.
